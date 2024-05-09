@@ -1,0 +1,10 @@
+{
+    "data_path": "./data",
+    "storage_path": "./storage",
+    "collection_name": "chromadb_talentship",
+    "result_type": "markdown",
+    "embed_type": "openai",
+    "openai_embedding_model": "text-embedding-3-small",
+    "openai_generator_model": "gpt-3.5-turbo-0125",
+    "palm_embedding_model": "models/embedding-gecko-001"
+}
