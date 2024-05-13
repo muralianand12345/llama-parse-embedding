@@ -9,110 +9,113 @@ from llama_parse import LlamaParse
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 
-class ChromaDBVector:
-    class StoreVector:
-        def __init__(self, storage_path, collection_name, result_type, documents_path):
-            self.storage_path = storage_path
-            self.collection_name = collection_name
-            self.result_type = result_type
-            self.documents_path = documents_path
+class StoreVector:
+    def __init__(self, storage_path, collection_name, result_type, documents_path):
+        self.storage_path = storage_path
+        self.collection_name = collection_name
+        self.result_type = result_type
+        self.documents_path = documents_path
 
-        def init_chroma_store(self):
-            """
-            Initialize the Chroma store.
+    def init_chroma_store(self):
+        """
+        Initialize the Chroma store.
 
-            Parameters:
-                storage_path (str): The path to the storage.
-                collection_name (str): The name of the collection.
+        Parameters:
+            storage_path (str): The path to the storage.
+            collection_name (str): The name of the collection.
 
-            Returns:
-                StorageContext: The storage context.
+        Returns:
+            StorageContext: The storage context.
 
-            Creates a storage path and collection name for the Chroma store. If the collection does not exist, it will be created.
-            ChromaVectoStore is used to store the Chroma vectors in the collection.
-            """
-            db = chromadb.PersistentClient(self.storage_path)
-            chroma_collection = db.get_or_create_collection(self.collection_name)
-            vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-            storage_context = StorageContext.from_defaults(vector_store=vector_store)
-            return storage_context
+        Creates a storage path and collection name for the Chroma store. If the collection does not exist, it will be created.
+        ChromaVectoStore is used to store the Chroma vectors in the collection.
+        """
+        db = chromadb.PersistentClient(self.storage_path)
+        chroma_collection = db.get_or_create_collection(self.collection_name)
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        return storage_context
 
-        def load_documents(self):
-            """
-            Load documents from a given path.
+    def load_documents(self):
+        """
+        Load documents from a given path.
 
-            Parameters:
-                result_type (str): The result type for the LlamaParse.
-                documents_path (str): The path to the documents.
+        Parameters:
+            result_type (str): The result type for the LlamaParse.
+            documents_path (str): The path to the documents.
 
-            Returns:
-                dict: The loaded documents.
+        Returns:
+            dict: The loaded documents.
 
-            The documents are loaded using the SimpleDirectoryReader with the LlamaParse extractor.
-            The result type is used to specify the type of the result.
-            """
-            # parsing_instructions = """
-            #     The provided documents contains images about surgery, most pages does has page number.
-            #     It also contains references to figures and tables.
-            # """
-            parser = LlamaParse(result_type=self.result_type)
-            file_extractor = {".pdf": parser}
-            documents = SimpleDirectoryReader(
-                input_files=self.documents_path,
-                file_extractor=file_extractor,
-            ).load_data()
-            return documents
+        The documents are loaded using the SimpleDirectoryReader with the LlamaParse extractor.
+        The result type is used to specify the type of the result.
+        """
+        parsing_instructions = '''
+        The document titled "AO Principles of Fracture Management" is an orthopedic surgery book that provides a comprehensive overview of the principles of fracture management. The book covers the basic science, clinical assessment, and treatment of fractures. It includes detailed information on the classification, diagnosis, and treatment of fractures in different parts of the body. The book also discusses the complications and outcomes associated with fracture management. The document is a valuable resource for orthopedic surgeons, residents, and medical students interested in fracture management. The page numbers is included bottom right or left of the page. The figures are included in the document and are referenced in the text. The references are included at the end of the document.'''
+        parser = LlamaParse(result_type=self.result_type, parsing_instructions=parsing_instructions)
+        file_extractor = {".pdf": parser}
+        documents = SimpleDirectoryReader(
+            input_files=self.documents_path,
+            file_extractor=file_extractor,
+        ).load_data()
+        return documents
 
-    class LoadData(StoreVector):
-        def load_db(self):
-            """
-            Load the database.
 
-            Parameters:
-                storage_path (str): The path to the storage.
-                collection_name (str): The name of the collection.
-                result_type (str): The result type for the LlamaParse.
-                documents_path (str): The path to the documents.
+class LoadData(StoreVector):
+    def load_db(self):
+        """
+        Load the database.
 
-            Returns:
-                Index: The loaded index.
+        Parameters:
+            storage_path (str): The path to the storage.
+            collection_name (str): The name of the collection.
+            result_type (str): The result type for the LlamaParse.
+            documents_path (str): The path to the documents.
 
-            This function loads and refreshes the database with the latest data from the data folder.
-            Reads the data from the data folder and initializes the ChromaDB.
-            """
-            try:
-                storage_context = self.init_chroma_store()
-                documents = self.load_documents()
-                index = VectorStoreIndex(documents, storage_context=storage_context)
-                index.storage_context.persist()
-                return index
-            except Exception as e:
-                raise Exception(str(e))
+        Returns:
+            Index: The loaded index.
 
-    class QuerySearch:
-        def __init__(self, storage_path, collection_name):
-            self.storage_path = storage_path
-            self.collection_name = collection_name
-
-        def load_index(self):
-            """
-            Load the index.
-
-            Parameters:
-                storage_path (str): The path to the storage.
-                collection_name (str): The name of the collection.
-
-            Returns:
-                Index: The loaded index.
-
-            Gets the ChromaDB collection and vector store from the storage path.
-            Loads the index from the storage context.
-            """
-            db = chromadb.PersistentClient(path=self.storage_path)
-            chroma_collection = db.get_or_create_collection(self.collection_name)
-            vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-            storage_context = StorageContext.from_defaults(
-                vector_store=vector_store, persist_dir=self.storage_path
+        This function loads and refreshes the database with the latest data from the data folder.
+        Reads the data from the data folder and initializes the ChromaDB.
+        """
+        try:
+            storage_context = self.init_chroma_store()
+            documents = self.load_documents()
+            index = VectorStoreIndex.from_documents(
+                documents, storage_context=storage_context
             )
-            index = load_index_from_storage(storage_context=storage_context)
+            index.storage_context.persist()
             return index
+        except Exception as e:
+            if "No such file or directory" in str(e):
+                raise Exception("No data found in the data folder")
+            raise Exception(str(e))
+
+
+class QuerySearch:
+    def __init__(self, storage_path, collection_name):
+        self.storage_path = storage_path
+        self.collection_name = collection_name
+
+    def load_index(self):
+        """
+        Load the index from the storage.
+
+        Parameters:
+            storage_path (str): The path to the storage.
+            collection_name (str): The name of the collection.
+
+        Returns:
+            Index: The loaded index.
+
+        Gets the ChromaDB collection and vector store from the storage path.
+        Loads the index from the storage context.
+        """
+        db = chromadb.PersistentClient(path=self.storage_path)
+        chroma_collection = db.get_or_create_collection(self.collection_name)
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(
+            vector_store=vector_store, persist_dir=self.storage_path
+        )
+        index = load_index_from_storage(storage_context=storage_context)
+        return index

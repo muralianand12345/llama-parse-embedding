@@ -9,9 +9,9 @@ from llama_index.core import Settings
 
 # custom package
 from utils.functions import read_data_folder
-from utils.vector_db import ChromaDBVector
+from utils.vector_db import StoreVector, LoadData, QuerySearch
 from utils.embedding import OpenAIEmbed, GooglePalmEmbed
-from utils.query_search import QuerySearch
+from utils.query_search import GetResults
 
 nest_asyncio.apply()
 
@@ -78,14 +78,14 @@ else:
     raise Exception("Invalid embedding type")
 
 # ChromaDB
-vectordb = ChromaDBVector()
-storevector = vectordb.StoreVector(
+storevector = StoreVector(
     storage_path=storage_path,
     collection_name=collection_name,
     result_type=result_type,
     documents_path=documents_path,
 )
-loaddata = vectordb.LoadData(
+
+loaddata = LoadData(
     storage_path=storage_path,
     collection_name=collection_name,
     result_type=result_type,
@@ -93,9 +93,7 @@ loaddata = vectordb.LoadData(
 )
 
 # QuerySearch
-searchdata = vectordb.QuerySearch(
-    storage_path=storage_path, collection_name=collection_name
-)
+searchdata = QuerySearch(storage_path=storage_path, collection_name=collection_name)
 
 # load data initially
 try:
@@ -134,14 +132,16 @@ def search_query(query: str):
     """
 
     try:
-        searchquery = QuerySearch(query=query, index=index)
+        searchquery = GetResults(query=query, index=index)
         response = searchquery.simple_search()
 
-        response_json = json.loads(response.response)
-        return Response(
-            status_code=200,
-            content=json.dumps(response_json),
-            media_type="application/json",
-        )
+        return response
+
+        # response_json = json.loads(response.response)
+        # return Response(
+        #     status_code=200,
+        #     content=json.dumps(response_json),
+        #     media_type="application/json",
+        # )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
