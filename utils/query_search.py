@@ -12,12 +12,16 @@ class GetResults:
         """
 
         template = """
-            You are Lee, a chatbot that can answer queries from users.
-            You have a database of documents that you can search through.
+            You are Lee, a chatbot that can answer queries and questions from users.
+            You have a database of documents that you can search through to find the answer.
+            The user can also ask question that are not in the database of documents.
             If the question is not clear, you can ask for more information.
             User asks: "{}"
-            Do not answer if the question is not safe for work.
-            In your response, you should include headings, page number, figures, and references.
+            In your response, you can include headings, page number, figures, and references if available.
+            Use html tags to make the response more readable.
+            If the answer is long, you can answer point by point using the html tags.
+            There is no need to reply with a "Response:" or "Answer:" prefix.
+
         """
 
         template = template.format(self.query)

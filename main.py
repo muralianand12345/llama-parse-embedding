@@ -2,7 +2,13 @@ import os
 import json
 import nest_asyncio
 from dotenv import dotenv_values
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import uvicorn
 
 # llm package
 from llama_index.core import Settings
@@ -103,12 +109,34 @@ try:
 except Exception as e:
     raise Exception(str(e))
 
+
+# FastAPI
+class Query(BaseModel):
+    query: str
+
+
 app = FastAPI()
 
+origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-@app.get("/")
-def index_render():
-    return Response(status_code=200, content="Welcome to the ChromaDB API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/css", StaticFiles(directory="./template/css"), name="static")
+app.mount("/js", StaticFiles(directory="./template/js"), name="static")
+app.mount("/img", StaticFiles(directory="./template/img"), name="static")
+
+templates = Jinja2Templates(directory="template")
+
+
+@app.get("/", response_class=HTMLResponse)
+def index_render(request: Request):
+    return templates.TemplateResponse("index.html", context={"request": request})
 
 
 @app.post("/db/reload")
@@ -126,13 +154,14 @@ def reload_db():
 
 
 @app.post("/search/query")
-def search_query(query: str):
+def search_query(query: Query):
     """
     Search the query in the database and return the response.
+    body: {"query": "your query"}
     """
 
     try:
-        searchquery = GetResults(query=query, index=index)
+        searchquery = GetResults(query=query.query, index=index)
         response = searchquery.simple_search()
 
         return response
@@ -145,3 +174,7 @@ def search_query(query: str):
         # )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+if (__name__) == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

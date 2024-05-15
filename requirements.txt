@@ -1,0 +1,12 @@
+nest_asyncio
+python-dotenv
+fastapi
+pydantic
+uvicorn
+llama-index
+llama-parse
+chromadb
+llama-index-embeddings-openai
+llama-index-embeddings-google
+llama-index-vector-stores-chroma
+sentence-transformers
